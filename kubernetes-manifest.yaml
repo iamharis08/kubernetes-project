@@ -22,7 +22,7 @@ spec:                # The "specification" - the details of what we want
       containers:        # List of containers to run inside each pod (usually just one)
       - name: audit-container # A name for the container
         # The MOST important line: Tells K8s which image to download and run
-        image: <your-region>-docker.pkg.dev/YOUR_PROJECT_ID/my-apps/audit-service:v1 
+        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/audit-service:v1 
         ports:
         - containerPort: 8080 # The port inside the container our app listens on (from Dockerfile CMD)
         # Optional: Resource requests tell K8s how much CPU/Memory the app needs
@@ -70,7 +70,7 @@ spec:
       containers:
       - name: phi-container
         # Tells K8s which image to run
-        image: <your-region>-docker.pkg.dev/YOUR_PROJECT_ID/my-apps/phi-service:v1
+        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/phi-service:v1
         ports:
         - containerPort: 8080
         # --- Environment Variable ---
@@ -123,7 +123,7 @@ spec:
       containers:
       - name: api-gateway-container
         # Tells K8s which image to run
-        image: <your-region>-docker.pkg.dev/YOUR_PROJECT_ID/my-apps/api-gateway:v1
+        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/api-gateway:v1
         ports:
         - containerPort: 8080
         # Tells the api-gateway code the address of the phi-service
@@ -183,7 +183,7 @@ spec:
       containers:
       - name: frontend-container
         # Tells K8s which image to run (the Nginx one we built)
-        image: <your-region>-docker.pkg.dev/YOUR_PROJECT_ID/my-apps/frontend:v1
+        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/frontend:v1
         ports:
         - containerPort: 80 # Nginx listens on port 80 by default
         resources:
