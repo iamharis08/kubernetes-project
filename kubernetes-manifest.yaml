@@ -1,0 +1,160 @@
+# kubernetes-manifest.yaml
+
+# --- 1. Audit Service ---
+
+# === DEPLOYMENT ===
+# This tells Kubernetes HOW to run the audit-service code
+
+apiVersion: apps/v1  # Specifies the API version for Deployments (standard)
+kind: Deployment     # We are defining a Deployment object
+metadata:
+  name: audit-service # The name we give to this Deployment
+spec:                # The "specification" - the details of what we want
+  replicas: 1        # Run exactly 1 copy (pod) of this application
+  selector:
+    matchLabels:
+      app: audit-service # This Deployment manages pods with the label "app: audit-service"
+  template:            # This is the blueprint for the pods it creates
+    metadata:
+      labels:
+        app: audit-service # Give the pods this label so the Deployment can find them
+    spec:                # Specification for the pods themselves
+      containers:        # List of containers to run inside each pod (usually just one)
+      - name: audit-container # A name for the container
+        # The MOST important line: Tells K8s which image to download and run
+        image: <your-region>-docker.pkg.dev/YOUR_PROJECT_ID/my-apps/audit-service:v1 
+        ports:
+        - containerPort: 8080 # The port inside the container our app listens on (from Dockerfile CMD)
+        # Optional: Resource requests tell K8s how much CPU/Memory the app needs
+        resources:
+          requests:
+            cpu: "100m" # "m" means "milliCPU" (100m = 0.1 CPU core)
+            memory: "128Mi" # "Mi" means "Mebibytes" (similar to Megabytes)
+
+---
+
+# === SERVICE ===
+# This gives the audit-service Deployment a stable network address INSIDE the cluster
+
+apiVersion: v1          # Specifies the API version for Services
+kind: Service         # We are defining a Service object
+metadata:
+  name: audit-service # The name of the Service (other pods will use this name to connect)
+spec:
+  type: ClusterIP     # Type "ClusterIP" means ONLY reachable INSIDE the cluster (default)
+  selector:
+    app: audit-service # This Service sends traffic to pods with the label "app: audit-service"
+  ports:
+  - port: 80          # The port the Service itself listens on (internal cluster port)
+    targetPort: 8080    # The port on the PODs to send traffic to (must match containerPort above)
+    protocol: TCP       # The network protocol (usually TCP for HTTP)
+
+# --- 2. PHI Service ---
+
+# === DEPLOYMENT ===
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phi-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phi-service
+  template:
+    metadata:
+      labels:
+        app: phi-service
+    spec:
+      containers:
+      - name: phi-container
+        # Tells K8s which image to run
+        image: <your-region>-docker.pkg.dev/YOUR_PROJECT_ID/my-apps/phi-service:v1
+        ports:
+        - containerPort: 8080
+        # --- Environment Variable ---
+        # This tells the phi-service code the address of the audit-service
+        env:
+        - name: AUDIT_SERVICE_URL # The variable name used in the Python code (os.getenv)
+          # The value is the internal DNS name K8s gives the audit-service Service:
+          # http://<service-name>/<path-in-code>
+          value: "http://audit-service/log" 
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+
+---
+
+# === SERVICE ===
+apiVersion: v1
+kind: Service
+metadata:
+  name: phi-service # This name is used by the api-gateway to connect
+spec:
+  type: ClusterIP     # Internal only
+  selector:
+    app: phi-service # Send traffic to pods labeled "app: phi-service"
+  ports:
+  - port: 80          # Service listens on port 80
+    targetPort: 8080    # Sends traffic to pod port 8080
+    protocol: TCP
+  
+
+# --- 3. API Gateway Service ---
+
+# === DEPLOYMENT ===
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway-container
+        # Tells K8s which image to run
+        image: <your-region>-docker.pkg.dev/YOUR_PROJECT_ID/my-apps/api-gateway:v1
+        ports:
+        - containerPort: 8080
+        # Tells the api-gateway code the address of the phi-service
+        env:
+        - name: PHI_SERVICE_URL # Variable name from Python code
+          # Value is the internal DNS name K8s gives the phi-service Service:
+          # http://<service-name>
+          value: "http://phi-service"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        # --- Health Check ---
+        # K8s will periodically check this path to see if the app is alive
+        readinessProbe:
+          httpGet:
+            path: / # The path we created in api-gateway main.py
+            port: 8080
+          initialDelaySeconds: 5 # Wait 5s before first check
+          periodSeconds: 10     # Check every 10s
+
+---
+
+# === SERVICE ===
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway # This name is used by the INGRESS to send traffic here
+spec:
+  type: ClusterIP     # IMPORTANT: Still ClusterIP! The Ingress handles public access.
+  selector:
+    app: api-gateway # Send traffic to pods labeled "app: api-gateway"
+  ports:
+  - port: 80          # Service listens on port 80
+    targetPort: 8080    # Sends traffic to pod port 8080
+    protocol: TCP
