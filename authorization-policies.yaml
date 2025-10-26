@@ -1,0 +1,48 @@
+# authorization-policies.yaml
+
+# Policy 1: Rules for accessing 'phi-service'
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-api-gateway-to-phi-service
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: phi-service  # This policy applies TO the phi-service pods
+  action: ALLOW         # We are defining rules for who IS allowed
+  rules:
+  - from:
+    - source:
+         # ONLY allow requests FROM pods using the api-gateway-sa ID badge
+         principals: ["cluster.local/ns/default/sa/api-gateway-sa"]
+    to:
+    - operation:
+         # ONLY allow HTTP GET requests (which is what /patient/{id} uses)
+         methods: ["GET"]
+---
+# Policy 2: Rules for accessing 'audit-service'
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-phi-service-to-audit-service
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: audit-service # This policy applies TO the audit-service pods
+  action: ALLOW        # We are defining rules for who IS allowed
+  rules:
+  - from:
+    - source:
+         # ONLY allow requests FROM pods using the phi-service-sa ID badge
+         principals: ["cluster.local/ns/default/sa/phi-service-sa"]
+    to:
+    - operation:
+         # ONLY allow HTTP POST requests (which is what /log uses)
+         methods: ["POST"]
+# IMPORTANT: Since the default policy is DENY once we apply any ALLOW policy,
+# these two policies mean:
+# - ONLY api-gateway can GET from phi-service.
+# - ONLY phi-service can POST to audit-service.
+# - ALL OTHER traffic between pods in the 'default' namespace is DENIED.
