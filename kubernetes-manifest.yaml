@@ -50,6 +50,7 @@ spec:
     protocol: TCP       # The network protocol (usually TCP for HTTP)
 
 # --- 2. PHI Service ---
+---
 
 # === DEPLOYMENT ===
 apiVersion: apps/v1
@@ -100,6 +101,7 @@ spec:
     targetPort: 8080    # Sends traffic to pod port 8080
     protocol: TCP
   
+---
 
 # --- 3. API Gateway Service ---
 
@@ -158,3 +160,97 @@ spec:
   - port: 80          # Service listens on port 80
     targetPort: 8080    # Sends traffic to pod port 8080
     protocol: TCP
+
+---
+
+# --- 4. Frontend Service ---
+
+# === DEPLOYMENT ===
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend-container
+        # Tells K8s which image to run (the Nginx one we built)
+        image: <your-region>-docker.pkg.dev/YOUR_PROJECT_ID/my-apps/frontend:v1
+        ports:
+        - containerPort: 80 # Nginx listens on port 80 by default
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        # Optional: Health check for Nginx
+        readinessProbe:
+          httpGet:
+            path: / # Check if the root path is serving
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+---
+
+# === SERVICE ===
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend # This name is used by the INGRESS to send traffic here
+spec:
+  type: ClusterIP     # Internal only - Ingress handles public access
+  selector:
+    app: frontend # Send traffic to pods labeled "app: frontend"
+  ports:
+  - port: 80          # Service listens on port 80
+    targetPort: 80      # Sends traffic to Nginx on pod port 80
+    protocol: TCP
+
+---
+
+# --- 5. Ingress (Public Access) ---
+
+apiVersion: networking.k8s.io/v1 # API version for Ingress
+kind: Ingress
+metadata:
+  name: phi-ingress # Name for our Ingress object
+  annotations:
+    # This annotation tells GKE we want a Google Cloud Load Balancer
+    kubernetes.io/ingress.class: "gce" 
+spec:
+  # --- Default Backend ---
+  # If none of the rules below match, send traffic to the frontend
+  defaultBackend:
+    service:
+      name: frontend # Send to the 'frontend' Service
+      port:
+        number: 80 # On port 80 of that Service
+  rules:
+  # --- Routing Rules ---
+  - http:
+      paths:
+      # Rule 1: If path starts with /api
+      - path: /api 
+        pathType: Prefix # Match anything starting with /api (e.g., /api/patient/123)
+        backend:
+          service:
+            name: api-gateway # Send traffic to the 'api-gateway' Service
+            port:
+              number: 80    # On port 80 of that Service
+      # Rule 2: If path is exactly / (handled by defaultBackend, but explicit is good too)
+      # You could add more rules here for other paths if needed
+      - path: /
+        pathType: Prefix # Match the root path and anything else
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
