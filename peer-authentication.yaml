@@ -1,0 +1,18 @@
+# -----------------------------------------------
+# ISTIO MUTUAL TLS POLICY
+# This configuration defines the Mutual TLS (mTLS) enforcement strategy
+# for all workloads within the 'default' namespace.
+# -----------------------------------------------
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default # Applies the policy globally across the specified namespace.
+  namespace: default
+spec:
+  mtls:
+    mode: PERMISSIVE # Configures Istio to accept both mTLS and plain text traffic.
+                     # PERMISSIVE is typically used during a rollout phase to ensure
+                     # backward compatibility while services are being sidecar injected.
+                     # For a strictly secure, compliant environment (like HIPAA), this
+                     # mode should eventually be switched to 'STRICT' once all services
+                     # are confirmed to be operating correctly with the Istio sidecar.
