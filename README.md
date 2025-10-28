@@ -1,5 +1,5 @@
 # 🛡️ Secure PHI Platform on GKE Autopilot (Zero-Trust Demo)
-#(STILL IN PROGRESS)
+# Project still in progress
 
 ## Project Overview
 
