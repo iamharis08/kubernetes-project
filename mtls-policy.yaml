@@ -1,9 +1,0 @@
-# mtls-policy.yaml
-apiVersion: security.istio.io/v1beta1
-kind: PeerAuthentication
-metadata:
-  name: default-strict-mtls
-  namespace: default # Apply this policy to the 'default' namespace
-spec:
-  mtls:
-    mode: PERMISSIVE # Enforce strict mTLS for all services in 'default'
