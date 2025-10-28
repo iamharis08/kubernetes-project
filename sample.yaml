@@ -1,8 +1,0 @@
-apiVersion: security.istio.io/v1beta1 # <--- THE FIX
-kind: PeerAuthentication
-metadata:
-  name: default # Apply to the whole namespace
-  namespace: default
-spec:
-  mtls:
-    mode: STRICT # Enforce STRICT mTLS
