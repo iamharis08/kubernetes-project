@@ -1,58 +1,81 @@
-# kubernetes-manifest.yaml
+# This manifest defines all necessary components (Deployments, Services, and Ingress)
+# for the secure, multi-tier microservices architecture.
+# All applications are configured to utilize Workload Identity (via serviceAccountName)
+# and are intended to run within an Istio service mesh.
 
+# -----------------------------------------------
 # --- 1. Audit Service ---
+# The Audit Service is a backend component responsible for securely logging
+# all sensitive operations. It is accessed only internally by the PHI Service.
+# -----------------------------------------------
 
-# === DEPLOYMENT ===
-# This tells Kubernetes HOW to run the audit-service code
-
-apiVersion: apps/v1  # Specifies the API version for Deployments (standard)
-kind: Deployment     # We are defining a Deployment object
+# === DEPLOYMENT: Audit Service ===
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: audit-service # The name we give to this Deployment
-spec:                # The "specification" - the details of what we want
-  replicas: 1        # Run exactly 1 copy (pod) of this application
+  name: audit-service
+spec:
+  # Maintain a single replica for logging stability.
+  replicas: 1
   selector:
     matchLabels:
-      app: audit-service # This Deployment manages pods with the label "app: audit-service"
-  template:            # This is the blueprint for the pods it creates
+      app: audit-service
+  template:
     metadata:
       labels:
-        app: audit-service # Give the pods this label so the Deployment can find them
-    spec:                # Specification for the pods themselves
-      containers:        # List of containers to run inside each pod (usually just one)
-      - name: audit-container # A name for the container
-        # The MOST important line: Tells K8s which image to download and run
-        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/audit-service:v1 
+        app: audit-service
+    spec:
+      # Links the pod to the Kubernetes Service Account (KSA) for Workload Identity.
+      serviceAccountName: audit-service-sa
+      containers:
+      - name: audit-container
+        # Image URL specific to the GCP Artifact Registry path.
+        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/audit-service:v3 
         ports:
-        - containerPort: 8080 # The port inside the container our app listens on (from Dockerfile CMD)
-        # Optional: Resource requests tell K8s how much CPU/Memory the app needs
+        - containerPort: 8080
+        env:
+        # Excludes Istio's sidecar metrics port from interception to prevent conflicts.
+        - name: ISTIO_INBOUND_PORTS_EXCLUDE
+          value: "15020"
         resources:
+          # Define resource requests to ensure Guaranteed Quality of Service (QoS).
           requests:
-            cpu: "100m" # "m" means "milliCPU" (100m = 0.1 CPU core)
-            memory: "128Mi" # "Mi" means "Mebibytes" (similar to Megabytes)
+            cpu: "100m"
+            memory: "128Mi"
+        readinessProbe:
+          # Simple liveness check to confirm the service is responsive on root path.
+          httpGet:
+            path: / 
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
 
 ---
-
-# === SERVICE ===
-# This gives the audit-service Deployment a stable network address INSIDE the cluster
-
-apiVersion: v1          # Specifies the API version for Services
-kind: Service         # We are defining a Service object
+# === SERVICE: Audit Service ===
+apiVersion: v1
+kind: Service
 metadata:
-  name: audit-service # The name of the Service (other pods will use this name to connect)
+  name: audit-service
 spec:
-  type: ClusterIP     # Type "ClusterIP" means ONLY reachable INSIDE the cluster (default)
+  # Internal service discovery only.
+  type: ClusterIP
   selector:
-    app: audit-service # This Service sends traffic to pods with the label "app: audit-service"
+    app: audit-service
   ports:
-  - port: 80          # The port the Service itself listens on (internal cluster port)
-    targetPort: 8080    # The port on the PODs to send traffic to (must match containerPort above)
-    protocol: TCP       # The network protocol (usually TCP for HTTP)
+  - name: http-audit
+    port: 80
+    targetPort: 8080
+    protocol: TCP
 
-# --- 2. PHI Service ---
 ---
+# -----------------------------------------------
+# --- 2. PHI Service ---
+# The PHI Service handles protected health information. It requires strict
+# access controls (Workload Identity) and must successfully call the Audit Service
+# before serving any PHI data.
+# -----------------------------------------------
 
-# === DEPLOYMENT ===
+# === DEPLOYMENT: PHI Service ===
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -65,47 +88,60 @@ spec:
   template:
     metadata:
       labels:
-        app: phi-service
+        app: phi-service 
     spec:
+      # Links the pod to the KSA for Workload Identity Federation.
+      serviceAccountName: phi-service-sa
       containers:
       - name: phi-container
-        # Tells K8s which image to run
-        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/phi-service:v1
+        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/phi-service:v2 
         ports:
-        - containerPort: 8080
-        # --- Environment Variable ---
-        # This tells the phi-service code the address of the audit-service
+        - containerPort: 8080 
         env:
-        - name: AUDIT_SERVICE_URL # The variable name used in the Python code (os.getenv)
-          # The value is the internal DNS name K8s gives the audit-service Service:
-          # http://<service-name>/<path-in-code>
-          value: "http://audit-service/log" 
+        # Internal configuration for connecting to the Audit Service.
+        - name: AUDIT_SERVICE_URL
+          value: "http://audit-service/log"
+        # Excludes Istio's sidecar metrics port from interception.
+        - name: ISTIO_INBOUND_PORTS_EXCLUDE
+          value: "15020"
         resources:
           requests:
             cpu: "100m"
             memory: "128Mi"
+        readinessProbe:
+          httpGet:
+            path: / 
+            port: 8080
+          # Aggressive readiness checks for critical PHI service.
+          initialDelaySeconds: 15 
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
 
 ---
-
-# === SERVICE ===
+# === SERVICE: PHI Service ===
 apiVersion: v1
 kind: Service
 metadata:
-  name: phi-service # This name is used by the api-gateway to connect
+  name: phi-service
 spec:
-  type: ClusterIP     # Internal only
+  type: ClusterIP
   selector:
-    app: phi-service # Send traffic to pods labeled "app: phi-service"
+    app: phi-service
   ports:
-  - port: 80          # Service listens on port 80
-    targetPort: 8080    # Sends traffic to pod port 8080
+  - name: http-service
+    port: 80
+    targetPort: 8080
     protocol: TCP
   
 ---
-
+# -----------------------------------------------
 # --- 3. API Gateway Service ---
+# This serves as the single ingress point for all application API calls.
+# It handles request routing and orchestrates calls to the PHI Service.
+# -----------------------------------------------
 
-# === DEPLOYMENT ===
+# === DEPLOYMENT: API Gateway Service ===
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -120,52 +156,51 @@ spec:
       labels:
         app: api-gateway
     spec:
+      # Links the pod to the KSA for Workload Identity.
+      serviceAccountName: api-gateway-sa
       containers:
       - name: api-gateway-container
-        # Tells K8s which image to run
-        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/api-gateway:v1
+        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/api-gateway:v9
         ports:
         - containerPort: 8080
-        # Tells the api-gateway code the address of the phi-service
         env:
-        - name: PHI_SERVICE_URL # Variable name from Python code
-          # Value is the internal DNS name K8s gives the phi-service Service:
-          # http://<service-name>
+        # Internal configuration for connecting to the PHI Service.
+        - name: PHI_SERVICE_URL
           value: "http://phi-service"
         resources:
           requests:
             cpu: "100m"
             memory: "128Mi"
-        # --- Health Check ---
-        # K8s will periodically check this path to see if the app is alive
         readinessProbe:
           httpGet:
-            path: / # The path we created in api-gateway main.py
+            path: /
             port: 8080
-          initialDelaySeconds: 5 # Wait 5s before first check
-          periodSeconds: 10     # Check every 10s
+          initialDelaySeconds: 5
+          periodSeconds: 10
 
 ---
-
-# === SERVICE ===
+# === SERVICE: API Gateway Service ===
 apiVersion: v1
 kind: Service
 metadata:
-  name: api-gateway # This name is used by the INGRESS to send traffic here
+  name: api-gateway
 spec:
-  type: ClusterIP     # IMPORTANT: Still ClusterIP! The Ingress handles public access.
+  type: ClusterIP
   selector:
-    app: api-gateway # Send traffic to pods labeled "app: api-gateway"
+    app: api-gateway
   ports:
-  - port: 80          # Service listens on port 80
-    targetPort: 8080    # Sends traffic to pod port 8080
-    protocol: TCP
+    - name: http-api 
+      port: 80
+      targetPort: 8080
+      protocol: TCP
 
 ---
-
+# -----------------------------------------------
 # --- 4. Frontend Service ---
+# The web application client serving the static/SPA assets.
+# -----------------------------------------------
 
-# === DEPLOYMENT ===
+# === DEPLOYMENT: Frontend Service ===
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -180,75 +215,76 @@ spec:
       labels:
         app: frontend
     spec:
+      # Links the pod to the KSA for Workload Identity (if it needs to access GCP resources).
+      serviceAccountName: frontend-sa
       containers:
       - name: frontend-container
-        # Tells K8s which image to run (the Nginx one we built)
-        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/frontend:v1
+        image: us-east1-docker.pkg.dev/elevance-demo-project/my-apps/frontend:v12
+        # Always pull the latest version to ensure client side updates.
+        imagePullPolicy: Always
         ports:
-        - containerPort: 80 # Nginx listens on port 80 by default
+        - containerPort: 80
         resources:
           requests:
             cpu: "100m"
             memory: "128Mi"
-        # Optional: Health check for Nginx
         readinessProbe:
           httpGet:
-            path: / # Check if the root path is serving
+            path: /
             port: 80
           initialDelaySeconds: 5
           periodSeconds: 10
 
 ---
-
-# === SERVICE ===
+# === SERVICE: Frontend Service ===
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend # This name is used by the INGRESS to send traffic here
+  name: frontend
 spec:
-  type: ClusterIP     # Internal only - Ingress handles public access
+  type: ClusterIP
   selector:
-    app: frontend # Send traffic to pods labeled "app: frontend"
+    app: frontend
   ports:
-  - port: 80          # Service listens on port 80
-    targetPort: 80      # Sends traffic to Nginx on pod port 80
+  - port: 80
+    targetPort: 80
     protocol: TCP
 
 ---
-
+# -----------------------------------------------
 # --- 5. Ingress (Public Access) ---
+# Defines the Google Cloud Load Balancer (GCLB) configuration for external traffic.
+# This is the single public entry point for the entire application.
+# -----------------------------------------------
 
-apiVersion: networking.k8s.io/v1 # API version for Ingress
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: phi-ingress # Name for our Ingress object
+  name: phi-ingress
   annotations:
-    # This annotation tells GKE we want a Google Cloud Load Balancer
+    # Explicitly sets the Ingress controller to use the GCE Load Balancer.
     kubernetes.io/ingress.class: "gce" 
 spec:
-  # --- Default Backend ---
-  # If none of the rules below match, send traffic to the frontend
+  # Directs all unmatched traffic (e.g., the root path '/') to the frontend.
   defaultBackend:
     service:
-      name: frontend # Send to the 'frontend' Service
+      name: frontend
       port:
-        number: 80 # On port 80 of that Service
+        number: 80
   rules:
-  # --- Routing Rules ---
   - http:
       paths:
-      # Rule 1: If path starts with /api
-      - path: /api 
-        pathType: Prefix # Match anything starting with /api (e.g., /api/patient/123)
+      # Path rule for all API traffic, routing it directly to the API Gateway.
+      - path: /api
+        pathType: Prefix
         backend:
           service:
-            name: api-gateway # Send traffic to the 'api-gateway' Service
+            name: api-gateway
             port:
-              number: 80    # On port 80 of that Service
-      # Rule 2: If path is exactly / (handled by defaultBackend, but explicit is good too)
-      # You could add more rules here for other paths if needed
+              number: 80
+      # Path rule for the root web application, routing it to the frontend service.
       - path: /
-        pathType: Prefix # Match the root path and anything else
+        pathType: Prefix
         backend:
           service:
             name: frontend
