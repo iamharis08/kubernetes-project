@@ -1,0 +1,13 @@
+# virtual-service.yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: phi-service
+  namespace: default
+spec:
+  hosts:
+  - phi-service # Targets the K8s service name
+  http:
+  - route:
+    - destination:
+        host: phi-service

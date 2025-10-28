@@ -1,6 +1,6 @@
-# authorization-policies.yaml
+# authorization-policies-fixed.yaml
 
-# Policy 1: Rules for accessing 'phi-service'
+# --- 1. Allow API Gateway to call PHI Service ---
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
@@ -9,19 +9,19 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: phi-service  # This policy applies TO the phi-service pods
-  action: ALLOW         # We are defining rules for who IS allowed
+      app: phi-service  # Apply to phi-service pods
+  action: ALLOW
   rules:
   - from:
     - source:
-         # ONLY allow requests FROM pods using the api-gateway-sa ID badge
-         principals: ["cluster.local/ns/default/sa/api-gateway-sa"]
+        principals: ["cluster.local/ns/default/sa/api-gateway-sa"]
     to:
     - operation:
-         # ONLY allow HTTP GET requests (which is what /patient/{id} uses)
-         methods: ["GET"]
+        methods: ["GET"]
+
 ---
-# Policy 2: Rules for accessing 'audit-service'
+
+# --- 2. Allow PHI Service to call Audit Service ---
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
@@ -30,19 +30,20 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: audit-service # This policy applies TO the audit-service pods
-  action: ALLOW        # We are defining rules for who IS allowed
+      app: audit-service  # Apply to audit-service pods
+  action: ALLOW
   rules:
   - from:
     - source:
-         # ONLY allow requests FROM pods using the phi-service-sa ID badge
-         principals: ["cluster.local/ns/default/sa/phi-service-sa"]
+        principals: ["cluster.local/ns/default/sa/phi-service-sa"]
     to:
     - operation:
-         # ONLY allow HTTP POST requests (which is what /log uses)
-         methods: ["POST"]
-# IMPORTANT: Since the default policy is DENY once we apply any ALLOW policy,
-# these two policies mean:
-# - ONLY api-gateway can GET from phi-service.
-# - ONLY phi-service can POST to audit-service.
-# - ALL OTHER traffic between pods in the 'default' namespace is DENIED.
+        methods: ["POST"]
+
+---
+
+# --- Notes ---
+# 1. Default Istio behavior is DENY, so only the above traffic is allowed.
+# 2. api-gateway GET → phi-service GET /patient/{id} is allowed.
+# 3. phi-service POST → audit-service /log is allowed.
+# 4. All other pod-to-pod traffic in 'default' namespace is denied.

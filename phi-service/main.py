@@ -1,10 +1,21 @@
 # In phi-service/main.py
 from fastapi import FastAPI, HTTPException, Request # Import Request
+import logging # Correctly imported
 import httpx
 import os
 
+# Configure logging ONCE
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 app = FastAPI()
 AUDIT_SERVICE_URL = os.getenv("AUDIT_SERVICE_URL", "http://audit-service/log")
+
+
+# In phi-service/main.py (Add this function if missing)
+@app.get("/")
+def health_check():
+    return {"status": "PHI Service is active"}
+
 
 @app.get("/patient/{patient_id}")
 async def get_patient_data(patient_id: str, request: Request): # Add request parameter
@@ -14,16 +25,24 @@ async def get_patient_data(patient_id: str, request: Request): # Add request par
     istio_header = request.headers.get('x-request-id')
     if istio_header:
         trace_log.append(f"3a. [Istio Sidecar]: Inbound request intercepted (Trace ID: ...{istio_header[-12:]}).")
+    else:
+        # Add a fallback in case the header isn't found
+        trace_log.append(f"3a. [Istio Sidecar]: (x-request-id header not found).")
+
 
     trace_log.append("4. [PHI Service]: Calling Audit Service...")
     try:
         async with httpx.AsyncClient() as client:
             # Call the internal audit-service
-            await client.post(AUDIT_SERVICE_URL,
+            response = await client.post(AUDIT_SERVICE_URL,
                               json={"level": "INFO", "message": f"PHI for patient {patient_id} was accessed."})
+            response.raise_for_status() # Check for errors from audit-service
+        
+        # NOTE: This assumes the audit service doesn't return its own trace log.
         trace_log.append("5. [Audit Service]: Log received and stored.")
 
     except Exception as e:
+        logging.exception(f"Error calling PHI service for patient {patient_id}")
         trace_log.append(f"5. [Audit Service]: CRITICAL ERROR - {e}")
         # Return error in trace, don't raise exception here
         return {"phi_data": None, "trace_log": trace_log, "error": "Audit logging failed."}
@@ -37,3 +56,4 @@ async def get_patient_data(patient_id: str, request: Request): # Add request par
     }
     trace_log.append("6. [PHI Service]: Audit success. Returning PHI data.")
     return {"phi_data": phi_data, "trace_log": trace_log}
+

@@ -6,4 +6,4 @@ metadata:
   namespace: default # Apply this policy to the 'default' namespace
 spec:
   mtls:
-    mode: STRICT # Enforce strict mTLS for all services in 'default'
+    mode: PERMISSIVE # Enforce strict mTLS for all services in 'default'

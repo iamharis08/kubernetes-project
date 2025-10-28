@@ -1,0 +1,126 @@
+# -----------------------------------------------
+# POLICY 1: API GATEWAY
+# -----------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-gateway-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # --- INCOMING ---
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 130.211.0.0/22 # Google's GCE Ingress IPs
+    - ipBlock:
+        cidr: 35.191.0.0/16  # Google's GCE Ingress IPs
+    ports:
+    - protocol: TCP
+      port: 8080 # This pod's containerPort
+
+  # --- OUTGOING ---
+  egress:
+  # Rule 1: Allow app traffic to phi-service pod on its container port
+  - to:
+    - podSelector:
+        matchLabels:
+          app: phi-service
+    ports:
+    - protocol: TCP
+      port: 8080 # This is the DESTINATION pod's port
+  
+  # Rule 2: (THE FIX) Allow ALL DNS traffic
+  # This lets the pod find "http://phi-service"
+  - ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+---
+# -----------------------------------------------
+# POLICY 2: PHI SERVICE
+# -----------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: phi-service-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: phi-service
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # --- INCOMING ---
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8080 # This pod's containerPort
+
+  # --- OUTGOING ---
+  egress:
+  # Rule 1: Allow app traffic to audit-service pod on its container port
+  - to:
+    - podSelector:
+        matchLabels:
+          app: audit-service
+    ports:
+    - protocol: TCP
+      port: 8080 # This is the DESTINATION pod's port
+
+  # Rule 2: (THE FIX) Allow ALL DNS traffic
+  - ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+---
+# -----------------------------------------------
+# POLICY 3: AUDIT SERVICE
+# -----------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: audit-service-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: audit-service
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # --- INCOMING ---
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: phi-service
+    ports:
+    - protocol: TCP
+      port: 8080 # This pod's containerPort
+  
+  # --- OUTGOING (This pod only needs DNS) ---
+  egress:
+  # Rule 1: (THE FIX) Allow ALL DNS traffic
+  - ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
