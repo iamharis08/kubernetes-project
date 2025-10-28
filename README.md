@@ -23,7 +23,7 @@ This application is built as a microservices chain, secured by a service mesh.
 </p>
 
 <p align="center">
-  <img src="frontend/public/denialtrace.png" alt="screenshotdenial" width="750"/>
+  <img src="frontend/public/denial.png" alt="screenshotdenial" width="750"/>
 </p>
 
 
