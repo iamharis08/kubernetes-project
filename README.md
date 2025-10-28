@@ -18,6 +18,14 @@ This application is built as a microservices chain, secured by a service mesh.
   <img src="frontend/public/phi_kubernetes_project_demo.gif" alt="Zero-Trust Egress Policy Demo" width="800"/>
 </p>
 
+<p align="center">
+  <img src="frontend/public/trace.gif" alt="screenshot" width="750"/>
+</p>
+
+<p align="center">
+  <img src="frontend/public/denialtrace.gif" alt="screenshot" width="750"/>
+</p>
+
 
 ## 🌐 System Architecture
 
