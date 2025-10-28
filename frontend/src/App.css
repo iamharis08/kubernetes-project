@@ -1,0 +1,541 @@
+/* frontend/src/App.css - Modernized UI/UX + Compliance Section */
+
+/* --- Base App Layout --- */
+.App {
+  width: 100%;
+  max-width: 1100px; /* Slightly wider max width */
+  margin: 0 auto; /* Center the App container */
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem; /* Increased gap */
+}
+
+/* --- Header --- */
+.App-header {
+  background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%); /* Subtle gradient */
+  color: #fff; /* Ensure white text */
+  padding: 1.5rem 2.5rem;
+  border-radius: 12px; /* Softer radius */
+  box-shadow: 0 8px 24px rgba(44, 62, 80, 0.2); /* Softer, deeper shadow */
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.75rem; /* Slightly adjusted */
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.Header-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* --- Main Container & Card --- */
+.container {
+  display: flex;
+  justify-content: center;
+}
+
+.Card {
+  background-color: var(--card-background);
+  border-radius: 16px; /* Softer radius */
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07); /* Softer shadow */
+  padding: 3rem; /* Increased padding */
+  width: 100%;
+  max-width: 850px; /* Adjusted max width */
+  display: flex;
+  flex-direction: column;
+  gap: 2rem; /* Increased gap */
+  border: 1px solid var(--border-color); /* Subtle border */
+}
+
+.Card-header {
+  text-align: center;
+  margin-bottom: 1rem; /* Reduced bottom margin */
+}
+
+.Card-header h2 {
+  font-size: 2rem; /* Slightly reduced */
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 0.75rem;
+}
+
+.Card-header p {
+  font-size: 1.05rem; /* Slightly reduced */
+  color: var(--light-text-color);
+  max-width: 650px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* --- Compliance Notice Banner --- */
+.compliance-notice {
+  background-color: #fff3cd; /* Light yellow background */
+  color: #664d03; /* Dark yellow/brown text */
+  border: 1px solid #ffeeba; /* Yellow border */
+  border-radius: var(--border-radius); /* Use your existing border-radius */
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem; /* Space below the notice */
+  font-size: 0.95rem;
+  text-align: center; /* Center the text */
+  line-height: 1.6;
+}
+
+.compliance-notice span {
+  margin-right: 0.5rem;
+  font-size: 1.1rem; /* Make emoji slightly larger */
+}
+
+.compliance-notice strong {
+  font-weight: 600;
+}
+
+/* --- Buttons --- */
+.Card-button {
+  padding: 0.9rem 1.8rem; /* Adjusted padding */
+  font-size: 1rem; /* Standardized size */
+  font-weight: 600;
+  border: none;
+  border-radius: 8px; /* Standard radius */
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); /* Smoother transition */
+  background-color: var(--accent-color);
+  color: #fff; /* Ensure white text */
+  text-align: center;
+  width: fit-content;
+  align-self: center;
+  box-shadow: 0 2px 5px rgba(52, 152, 219, 0.2); /* Subtle button shadow */
+}
+
+.Card-button:hover:not(:disabled) {
+  background-color: #2980b9;
+  transform: translateY(-3px); /* Slightly more lift */
+  box-shadow: 0 6px 12px rgba(52, 152, 219, 0.3); /* Enhanced hover shadow */
+}
+
+.Card-button:disabled {
+  background-color: #bdc3c7; /* Softer disabled color */
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+.Card-button.secondary {
+  background-color: var(--error-color);
+  box-shadow: 0 2px 5px rgba(231, 76, 60, 0.2);
+}
+
+.Card-button.secondary:hover:not(:disabled) {
+  background-color: #c0392b;
+  box-shadow: 0 6px 12px rgba(231, 76, 60, 0.3);
+}
+
+
+/* --- Content Grid for Results (Stacked Layout) --- */
+.content-grid {
+  display: grid;
+  gap: 2rem; /* Increased gap */
+  margin-top: 1.5rem;
+}
+
+.result-box {
+  background-color: #fdfdfd; /* Slightly off-white */
+  border-radius: 12px; /* Softer */
+  padding: 1.8rem; /* Increased */
+  border: 1px solid #eee; /* Softer border */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04); /* Subtle box shadow */
+  text-align: left;
+}
+
+.result-box h3 {
+  font-size: 1.15rem; /* Slightly adjusted */
+  font-weight: 600;
+  color: var(--secondary-color); /* Use secondary color */
+  margin-top: 0;
+  margin-bottom: 1.2rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+/* --- Code & Trace Boxes --- */
+.data-pre,
+.trace-box { /* Shared styles for both types of boxes */
+  background-color: #282c34; /* Consistent dark background */
+  color: #abb2bf; /* Softer light text */
+  padding: 1.2rem 1.5rem; /* Increased padding */
+  border-radius: 8px; /* Standard radius */
+  overflow-x: auto;
+  font-family: 'Source Code Pro', 'Menlo', 'Monaco', monospace; /* Better font stack */
+  font-size: 0.9rem;
+  flex-grow: 1;
+  text-align: left;
+  line-height: 1.6;
+  border: 1px solid #3e4451; /* Darker border */
+}
+
+.trace-box {
+  transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.trace-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.trace-box li {
+  margin-bottom: 0.5rem; /* Increased spacing */
+  word-break: break-word; /* Better word breaking */
+  text-align: left;
+  position: relative; /* Needed for ::before pseudo-element */
+  padding-left: 1.5rem; /* Indent text to make space for bullet */
+}
+
+/* Default bullet for trace items */
+.trace-box li::before {
+  content: '>';
+  position: absolute;
+  left: 0;
+  top: 0; /* Adjust as needed for vertical alignment */
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+/* Highlight the prefix part of regular trace steps, e.g., "[API Gateway]:" */
+.trace-box li span {
+  font-weight: 600;
+  color: #98c379; /* Greenish color for prefix */
+  margin-right: 0.5rem;
+}
+
+/* --- Firewall Proof Section --- */
+.firewall-proof-section {
+  padding: 2.5rem;
+  text-align: center;
+  background-color: #f4f6f8; /* A very light, distinct background */
+  border-radius: 12px;
+  margin-top: 1rem;
+  border: 1px solid #dde1e5; /* Slightly darker border */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03); /* Lighter shadow for this section */
+}
+
+/* Use a generic class for section titles */
+.section-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+  text-align: center; /* Ensure titles are centered */
+}
+
+/* Use a generic class for section dividers */
+.section-divider {
+  border: none;
+  border-top: 1px solid #dcdcdc; /* Lighter divider */
+  margin: 2rem auto;
+  width: 60%; /* Shorter divider */
+}
+
+.firewall-proof-section .description-text {
+  max-width: 700px;
+  margin: 0 auto 2rem auto;
+  text-align: center; /* Center align for description block */
+  font-size: 1.05rem;
+  color: var(--text-color);
+  line-height: 1.7;
+}
+
+.firewall-proof-section .description-text p {
+  margin-bottom: 1rem;
+}
+
+.firewall-proof-section .description-text p:last-child {
+  margin-bottom: 0;
+}
+
+.firewall-proof-section .highlight {
+  color: var(--secondary-color);
+  font-weight: 700;
+  background-color: #eaf2f8; /* Very subtle background highlight */
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+}
+
+.firewall-button {
+  margin: 1.5rem auto 1.5rem auto;
+}
+
+/* Security Trace specific styles */
+.security-trace-display {
+  /* Inherits base .trace-box styles */
+  max-width: 700px; /* Constrain width */
+  margin: 0 auto; /* Center the box */
+}
+
+.security-trace-display.security-active {
+    border: 2px solid var(--success-color);
+    box-shadow: 0 0 10px rgba(39, 174, 96, 0.3); /* Add glow */
+}
+
+.security-trace-display li.security-blocked {
+    color: var(--success-color) !important; /* Green for success */
+    font-weight: 600; /* Make it bolder */
+}
+
+.security-trace-display li.security-blocked::before {
+    content: '✓'; /* Checkmark for successful block */
+    color: var(--success-color);
+}
+
+
+/* --- HIPAA Compliance Checklist Section --- */
+.compliance-checklist-section {
+  padding: 2.5rem;
+  background-color: #fdfdfd; /* Match result box background */
+  border-radius: 12px;
+  margin-top: 1rem;
+  border: 1px solid #eee; /* Softer border */
+}
+
+.checklist-columns {
+  display: grid;
+  grid-template-columns: 1fr; /* Stack on small screens */
+  gap: 2.5rem; /* Increased gap */
+  max-width: 800px;
+  margin: 1rem auto 0 auto;
+}
+
+@media (min-width: 768px) {
+  .checklist-columns {
+    grid-template-columns: 1fr 1fr; /* Side-by-side on larger screens */
+  }
+}
+
+.checklist-column h4 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--secondary-color);
+  margin-top: 0;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.checklist li {
+  margin-bottom: 0.8rem;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  position: relative;
+  padding-left: 1.8rem; /* Space for icon */
+}
+
+.checklist li::before {
+  position: absolute;
+  left: 0;
+  top: 4px; /* Adjust vertical alignment */
+  font-size: 1.1rem; /* Icon size */
+}
+
+.checklist.implemented li::before {
+  content: '✅'; /* Checkmark for implemented */
+}
+
+.checklist.needed li::before {
+  content: '⚪'; /* Circle for needed */
+  /* Or use '⏳' for a timer glass, or '➡️' for an arrow */
+}
+
+
+/* --- Architecture & Explanation Section --- */
+.architecture-section {
+  padding: 2.5rem;
+  text-align: center;
+  background-color: #fdfdfd; /* Match result box background */
+  border-radius: 12px;
+  margin-top: 1rem;
+  border: 1px solid #eee;
+}
+
+/* Reuse generic section styles */
+.architecture-section .section-title { /* Style H3 in this section */
+  font-size: 1.6rem;
+}
+.architecture-section .section-divider { /* Style HR in this section */
+    /* Uses generic .section-divider */
+}
+.architecture-section p { /* Style P in this section */
+  font-size: 1rem;
+  line-height: 1.8;
+  max-width: 750px;
+  margin: 1.5rem auto;
+  text-align: left;
+}
+
+.explanation-list {
+  text-align: left;
+  max-width: 730px;
+  margin: 1.5rem auto 2.5rem auto;
+  padding-left: 0;
+  list-style-position: inside;
+}
+
+.explanation-list > li {
+  margin-bottom: 1.2rem;
+  line-height: 1.7;
+  font-size: 1rem;
+  padding-left: 1rem;
+  position: relative;
+}
+.explanation-list > li::before {
+    content: '✓';
+    color: var(--success-color);
+    font-weight: bold;
+    position: absolute;
+    left: -0.5rem;
+    top: 1px;
+}
+
+.explanation-list li strong {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.explanation-list li ul {
+  margin-top: 0.8rem;
+  padding-left: 2rem;
+  list-style-type: disc;
+}
+
+.explanation-list li ul li {
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+  color: var(--light-text-color);
+  line-height: 1.6;
+}
+
+.architecture-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin-top: 2rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+  .App {
+      gap: 1.5rem;
+  }
+  .App-header {
+    font-size: 1.5rem;
+    padding: 1.2rem 1.5rem;
+  }
+  .Card {
+    padding: 1.8rem;
+    gap: 1.5rem;
+  }
+  .Card-header h2 {
+    font-size: 1.7rem;
+  }
+  .Card-header p {
+    font-size: 1rem;
+  }
+  /* Apply padding to all sections */
+  .architecture-section, .firewall-proof-section, .compliance-checklist-section {
+    padding: 1.8rem;
+  }
+  /* Apply font size to all section titles */
+  .section-title {
+    font-size: 1.4rem;
+  }
+   /* Apply font size to all section paragraphs/lists */
+   .architecture-section p, .explanation-list li, .firewall-proof-section .description-text, .checklist li {
+    font-size: 0.95rem;
+  }
+   .security-trace-display {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  #root {
+      padding: 1rem 0.5rem;
+  }
+  .App-header {
+    font-size: 1.3rem;
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  .Card {
+    padding: 1.2rem;
+    gap: 1rem;
+    border-radius: 12px;
+  }
+  .Card-header h2 {
+    font-size: 1.5rem;
+  }
+   .Card-header p {
+    font-size: 0.95rem;
+  }
+  .Card-button {
+    font-size: 0.95rem;
+    padding: 0.7rem 1.1rem;
+  }
+  .result-box {
+      padding: 1rem;
+      border-radius: 8px;
+  }
+  .result-box h3 {
+    font-size: 1rem;
+  }
+  .data-pre, .trace-box {
+    font-size: 0.8rem;
+    padding: 0.8rem;
+    border-radius: 6px;
+  }
+   .trace-box li {
+     padding-left: 1.2rem;
+   }
+   /* Apply padding to all sections */
+   .architecture-section, .firewall-proof-section, .compliance-checklist-section {
+       padding: 1.2rem;
+       border-radius: 8px;
+   }
+   /* Apply font size to all section titles */
+  .section-title {
+    font-size: 1.3rem;
+  }
+   /* Apply font size to all section paragraphs/lists */
+  .architecture-section p, .explanation-list li, .firewall-proof-section .description-text, .checklist li {
+    font-size: 0.9rem;
+    text-align: left;
+  }
+  .explanation-list {
+    padding-left: 0.5rem;
+  }
+   .explanation-list > li::before {
+       left: -0.2rem;
+   }
+   .checklist li {
+       padding-left: 1.5rem; /* Ensure space for icons on mobile */
+   }
+   .compliance-notice { /* Responsive notice */
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+}
