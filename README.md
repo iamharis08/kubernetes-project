@@ -19,11 +19,11 @@ This application is built as a microservices chain, secured by a service mesh.
 </p>
 
 <p align="center">
-  <img src="frontend/public/trace.gif" alt="screenshot" width="750"/>
+  <img src="frontend/public/trace.png" alt="screenshot" width="750"/>
 </p>
 
 <p align="center">
-  <img src="frontend/public/denialtrace.gif" alt="screenshot" width="750"/>
+  <img src="frontend/public/denialtrace.png" alt="screenshot" width="750"/>
 </p>
 
 
