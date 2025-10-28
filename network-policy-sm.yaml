@@ -1,0 +1,213 @@
+# -----------------------------------------------
+# POLICY 1: API GATEWAY
+# -----------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-gateway-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+
+  # --- INCOMING ---
+  ingress:
+  - from:
+    - ipBlock: { cidr: 130.211.0.0/22 } # Google LB Health Checks
+    - ipBlock: { cidr: 35.191.0.0/16 }  # Google LB Health Checks
+    ports:
+    - protocol: TCP
+      port: 8080 # This pod's containerPort
+
+  # --- OUTGOING ---
+  egress:
+  # Rule 1: Allow app traffic to specific destination pods
+  - to:
+    - podSelector:
+        matchLabels:
+          app: phi-service
+    ports:
+    - protocol: TCP
+      port: 8080 # Destination containerPort
+
+  # Rule 2: (THE FIX) Allow Internal Cluster Communication (Webhooks, etc.) on 443
+  - to:
+    - ipBlock:
+        cidr: 10.98.128.0/17 # Your Pod CIDR
+    ports:
+    - protocol: TCP
+      port: 443 # Allow internal HTTPS/Webhook traffic
+
+  # Rule 3: Allow DNS lookups
+  - ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+  # Rule 4: Allow GKE Metadata Server access
+  - to:
+    - ipBlock:
+        cidr: 169.254.169.254/32
+    ports:
+    - protocol: TCP
+      port: 80
+
+  # Rule 5: Allow access to Kube API Server Control Plane endpoints
+  # Use your actual control plane CIDR here if different
+  - to:
+    - ipBlock:
+        cidr: 172.16.0.16/28 # Control Plane Endpoint Range
+    ports:
+    - protocol: TCP
+      port: 443 # Kube API Server Port
+
+  # Rule 6: Allow access to Google APIs (for Managed ASM Control Plane)
+  - ports:
+    - protocol: TCP
+      port: 443 # Allow *external* 443 now covered by Rule 5 combined with DNS
+
+---
+# -----------------------------------------------
+# POLICY 2: PHI SERVICE
+# -----------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: phi-service-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: phi-service
+  policyTypes:
+  - Ingress
+  - Egress
+
+  # --- INCOMING ---
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8080 # This pod's containerPort
+
+  # --- OUTGOING ---
+  egress:
+  # Rule 1: Allow app traffic to specific destination pods
+  - to:
+    - podSelector:
+        matchLabels:
+          app: audit-service
+    ports:
+    - protocol: TCP
+      port: 8080 # Destination containerPort
+
+  # Rule 2: (THE FIX) Allow Internal Cluster Communication (Webhooks, etc.) on 443
+  - to:
+    - ipBlock:
+        cidr: 10.98.128.0/17 # Your Pod CIDR
+    ports:
+    - protocol: TCP
+      port: 443
+
+  # Rule 3: Allow DNS lookups
+  - ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+  # Rule 4: Allow GKE Metadata Server access
+  - to:
+    - ipBlock:
+        cidr: 169.254.169.254/32
+    ports:
+    - protocol: TCP
+      port: 80
+
+  # Rule 5: Allow access to Kube API Server Control Plane endpoints
+  # Use your actual control plane CIDR here if different
+  - to:
+    - ipBlock:
+        cidr: 172.16.0.16/28
+    ports:
+    - protocol: TCP
+      port: 443
+
+  # Rule 6: Allow access to Google APIs (for Managed ASM Control Plane)
+  - ports:
+    - protocol: TCP
+      port: 443
+
+---
+# -----------------------------------------------
+# POLICY 3: AUDIT SERVICE
+# -----------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: audit-service-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: audit-service
+  policyTypes:
+  - Ingress
+  - Egress
+
+  # --- INCOMING ---
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: phi-service
+    ports:
+    - protocol: TCP
+      port: 8080 # This pod's containerPort
+
+  # --- OUTGOING (Needs DNS, Metadata, Kube API, Google APIs, Internal 443) ---
+  egress:
+  # Rule 1: (THE FIX) Allow Internal Cluster Communication (Webhooks, etc.) on 443
+  - to:
+    - ipBlock:
+        cidr: 10.98.128.0/17 # Your Pod CIDR
+    ports:
+    - protocol: TCP
+      port: 443
+
+  # Rule 2: Allow DNS lookups
+  - ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+  # Rule 3: Allow GKE Metadata Server access
+  - to:
+    - ipBlock:
+        cidr: 169.254.169.254/32
+    ports:
+    - protocol: TCP
+      port: 80
+
+  # Rule 4: Allow access to Kube API Server Control Plane endpoints
+  # Use your actual control plane CIDR here if different
+  - to:
+    - ipBlock:
+        cidr: 172.16.0.16/28
+    ports:
+    - protocol: TCP
+      port: 443
+
+  # Rule 5: Allow access to Google APIs (for Managed ASM Control Plane)
+  - ports:
+    - protocol: TCP
+      port: 443
