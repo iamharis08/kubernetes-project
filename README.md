@@ -1,8 +1,9 @@
 # 🛡️ Secure PHI Platform on GKE Autopilot (Zero-Trust Demo)
+#(STILL IN PROGRESS)
 
 ## Project Overview
 
-This project demonstrates a production-ready, secure, and highly observable microservices architecture built on **Google Kubernetes Engine (GKE) Autopilot**. The primary objective is to enforce **Zero-Trust networking** and **mTLS encryption** to meet stringent regulatory requirements like **HIPAA** (Health Insurance Portability and Accountability Act).
+This project demonstrates a  secure, and highly observable microservices architecture built on **Google Kubernetes Engine (GKE) Autopilot**. The primary objective is to enforce **Zero-Trust networking** and **mTLS encryption** to meet stringent regulatory requirements like **HIPAA** (Health Insurance Portability and Accountability Act).
 
 This application simulates a basic Personal Health Information (PHI) workflow, showing that data access is strictly limited to an authorized, encrypted path.
 
