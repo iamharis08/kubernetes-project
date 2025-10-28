@@ -13,6 +13,12 @@ This application simulates a basic Personal Health Information (PHI) workflow, s
 
 This application is built as a microservices chain, secured by a service mesh.
 
+## 🌐 System Architecture
+
+<p align="center">
+  <img src="frontend/public/architecture.svg" alt="Zero-Trust GKE Architecture Diagram" width="800"/>
+</p>
+
 ### Microservices Flow
 
 The architecture strictly enforces a rigid, directional trust model:
