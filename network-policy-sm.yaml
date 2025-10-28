@@ -1,5 +1,12 @@
+# This file defines the NetworkPolicy resources for all backend services.
+# These policies enforce the Principle of Least Privilege by explicitly
+# allowing only required ingress and egress traffic, effectively blocking
+# all other communication within the cluster and externally.
+
 # -----------------------------------------------
 # POLICY 1: API GATEWAY
+# The API Gateway handles public ingress and is only allowed to communicate
+# downstream to the PHI Service.
 # -----------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -7,49 +14,54 @@ metadata:
   name: api-gateway-policy
   namespace: default
 spec:
+  # Targets the API Gateway Deployment.
   podSelector:
     matchLabels:
       app: api-gateway
+  # Activates both ingress and egress filtering.
   policyTypes:
   - Ingress
   - Egress
 
-  # --- INCOMING ---
+  # --- INCOMING (Ingress) ---
   ingress:
+  # Rule 1: Allow necessary traffic from the GKE/GCP Load Balancer (L7 Ingress)
   - from:
-    - ipBlock: { cidr: 130.211.0.0/22 } # Google LB Health Checks
-    - ipBlock: { cidr: 35.191.0.0/16 }  # Google LB Health Checks
+    # Google's documented CIDRs for Load Balancer health checks.
+    - ipBlock: { cidr: 130.211.0.0/22 }
+    - ipBlock: { cidr: 35.191.0.0/16 }
     ports:
     - protocol: TCP
-      port: 8080 # This pod's containerPort
+      port: 8080 # The container port exposed by the service.
 
-  # --- OUTGOING ---
+  # --- OUTGOING (Egress) ---
   egress:
-  # Rule 1: Allow app traffic to specific destination pods
+  # Rule 1: Allow application flow traffic to the PHI service.
   - to:
     - podSelector:
         matchLabels:
           app: phi-service
     ports:
     - protocol: TCP
-      port: 8080 # Destination containerPort
+      port: 8080 # Destination container port of the PHI service.
 
-  # Rule 2: (THE FIX) Allow Internal Cluster Communication (Webhooks, etc.) on 443
+  # Rule 2: Allow Internal Cluster Communication (e.g., Istio webhooks, metrics) on 443.
+  # This is essential for the sidecar injector and general cluster health.
   - to:
     - ipBlock:
-        cidr: 10.98.128.0/17 # Your Pod CIDR
+        cidr: 10.98.128.0/17 # Assumed Pod CIDR range for internal cluster traffic.
     ports:
     - protocol: TCP
-      port: 443 # Allow internal HTTPS/Webhook traffic
+      port: 443 # Internal HTTPS/Webhook traffic.
 
-  # Rule 3: Allow DNS lookups
+  # Rule 3: Allow standard DNS lookups for service discovery.
   - ports:
     - protocol: UDP
       port: 53
     - protocol: TCP
       port: 53
 
-  # Rule 4: Allow GKE Metadata Server access
+  # Rule 4: Allow access to the GKE Metadata Server (essential for Workload Identity).
   - to:
     - ipBlock:
         cidr: 169.254.169.254/32
@@ -57,23 +69,25 @@ spec:
     - protocol: TCP
       port: 80
 
-  # Rule 5: Allow access to Kube API Server Control Plane endpoints
-  # Use your actual control plane CIDR here if different
+  # Rule 5: Allow access to the Kubernetes API Server Control Plane endpoint.
   - to:
     - ipBlock:
-        cidr: 172.16.0.16/28 # Control Plane Endpoint Range
+        cidr: 172.16.0.16/28 # Placeholder for Control Plane Endpoint Range.
     ports:
     - protocol: TCP
-      port: 443 # Kube API Server Port
+      port: 443 # Kube API Server Port.
 
-  # Rule 6: Allow access to Google APIs (for Managed ASM Control Plane)
+  # Rule 6: Allow access to Google APIs (e.g., for Workload Identity credential exchange).
+  # This typically covers communication to global endpoints like storage.googleapis.com.
   - ports:
     - protocol: TCP
-      port: 443 # Allow *external* 443 now covered by Rule 5 combined with DNS
+      port: 443
 
 ---
 # -----------------------------------------------
 # POLICY 2: PHI SERVICE
+# The PHI Service should only accept requests from the API Gateway and
+# only communicate downstream to the Audit Service.
 # -----------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -88,43 +102,44 @@ spec:
   - Ingress
   - Egress
 
-  # --- INCOMING ---
+  # --- INCOMING (Ingress) ---
   ingress:
+  # Rule 1: Restrict ingress traffic only to the API Gateway pods.
   - from:
     - podSelector:
         matchLabels:
           app: api-gateway
     ports:
     - protocol: TCP
-      port: 8080 # This pod's containerPort
+      port: 8080 # This pod's container port.
 
-  # --- OUTGOING ---
+  # --- OUTGOING (Egress) ---
   egress:
-  # Rule 1: Allow app traffic to specific destination pods
+  # Rule 1: Allow application flow traffic to the Audit Service.
   - to:
     - podSelector:
         matchLabels:
           app: audit-service
     ports:
     - protocol: TCP
-      port: 8080 # Destination containerPort
+      port: 8080 # Destination container port of the Audit service.
 
-  # Rule 2: (THE FIX) Allow Internal Cluster Communication (Webhooks, etc.) on 443
+  # Rule 2: Allow Internal Cluster Communication (e.g., Istio webhooks) on 443.
   - to:
     - ipBlock:
-        cidr: 10.98.128.0/17 # Your Pod CIDR
+        cidr: 10.98.128.0/17 # Assumed Pod CIDR range.
     ports:
     - protocol: TCP
       port: 443
 
-  # Rule 3: Allow DNS lookups
+  # Rule 3: Allow standard DNS lookups.
   - ports:
     - protocol: UDP
       port: 53
     - protocol: TCP
       port: 53
 
-  # Rule 4: Allow GKE Metadata Server access
+  # Rule 4: Allow GKE Metadata Server access (for Workload Identity).
   - to:
     - ipBlock:
         cidr: 169.254.169.254/32
@@ -132,16 +147,15 @@ spec:
     - protocol: TCP
       port: 80
 
-  # Rule 5: Allow access to Kube API Server Control Plane endpoints
-  # Use your actual control plane CIDR here if different
+  # Rule 5: Allow access to the Kubernetes API Server Control Plane endpoint.
   - to:
     - ipBlock:
-        cidr: 172.16.0.16/28
+        cidr: 172.16.0.16/28 # Placeholder for Control Plane Endpoint Range.
     ports:
     - protocol: TCP
       port: 443
 
-  # Rule 6: Allow access to Google APIs (for Managed ASM Control Plane)
+  # Rule 6: Allow access to Google APIs (e.g., Workload Identity).
   - ports:
     - protocol: TCP
       port: 443
@@ -149,6 +163,8 @@ spec:
 ---
 # -----------------------------------------------
 # POLICY 3: AUDIT SERVICE
+# The Audit Service is highly sensitive and should only allow ingress from PHI
+# and only allow egress for essential infrastructure services.
 # -----------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -163,34 +179,35 @@ spec:
   - Ingress
   - Egress
 
-  # --- INCOMING ---
+  # --- INCOMING (Ingress) ---
   ingress:
+  # Rule 1: Restrict ingress traffic only to the PHI Service pods.
   - from:
     - podSelector:
         matchLabels:
           app: phi-service
     ports:
     - protocol: TCP
-      port: 8080 # This pod's containerPort
+      port: 8080 # This pod's container port.
 
-  # --- OUTGOING (Needs DNS, Metadata, Kube API, Google APIs, Internal 443) ---
+  # --- OUTGOING (Egress) ---
   egress:
-  # Rule 1: (THE FIX) Allow Internal Cluster Communication (Webhooks, etc.) on 443
+  # Rule 1: Allow Internal Cluster Communication (e.g., Istio webhooks) on 443.
   - to:
     - ipBlock:
-        cidr: 10.98.128.0/17 # Your Pod CIDR
+        cidr: 10.98.128.0/17 # Assumed Pod CIDR range.
     ports:
     - protocol: TCP
       port: 443
 
-  # Rule 2: Allow DNS lookups
+  # Rule 2: Allow standard DNS lookups.
   - ports:
     - protocol: UDP
       port: 53
     - protocol: TCP
       port: 53
 
-  # Rule 3: Allow GKE Metadata Server access
+  # Rule 3: Allow GKE Metadata Server access (for Workload Identity).
   - to:
     - ipBlock:
         cidr: 169.254.169.254/32
@@ -198,16 +215,15 @@ spec:
     - protocol: TCP
       port: 80
 
-  # Rule 4: Allow access to Kube API Server Control Plane endpoints
-  # Use your actual control plane CIDR here if different
+  # Rule 4: Allow access to the Kubernetes API Server Control Plane endpoint.
   - to:
     - ipBlock:
-        cidr: 172.16.0.16/28
+        cidr: 172.16.0.16/28 # Placeholder for Control Plane Endpoint Range.
     ports:
     - protocol: TCP
       port: 443
 
-  # Rule 5: Allow access to Google APIs (for Managed ASM Control Plane)
+  # Rule 5: Allow access to Google APIs (e.g., Workload Identity, GCR pulls).
   - ports:
     - protocol: TCP
       port: 443
