@@ -13,7 +13,7 @@ This application simulates a basic Personal Health Information (PHI) workflow, s
 
 This application is built as a microservices chain, secured by a service mesh.
 
-## 🌐 DEMO OF LIVE SITE
+## 🌐 DEMO OF LIVE SITE (Live Site Currently Purposely Disabled Due to Low Budget :'()
 <p align="center">
   <img src="frontend/public/phi_kubernetes_project_demo.gif" alt="Zero-Trust Egress Policy Demo" width="800"/>
 </p>
